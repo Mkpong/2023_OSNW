@@ -171,11 +171,14 @@ int main(int argc, char **argv)
 					}
 					if(strcmp(buf, "quit ")== 0){
 						getString(str);
-						printf("%s\n" , str);
-						printConnection();
 						deleteConnection(temp->pid);
-						printConnection();
-						// 자식 서버에게 pipeline으로 write하는 부분
+						printf("%s\n" , str);
+						/* 모든 자식 서버에게 전체 데이터 전송 */
+						node *wtemp = head;
+						while(wtemp != NULL){
+							write(wtemp->wfd , str , strlen(str));
+							wtemp = wtemp->next;
+						}
 					}
 					else{
 						strcpy(temp->data, buf);
@@ -212,23 +215,46 @@ int main(int argc, char **argv)
 			close( listen_fd );
 			memset(buf, 0x00, MAXLINE);
 			printf("connected-%s(%d)\n" , inet_ntoa(client_addr.sin_addr), getpid());
-			while((readn = read(client_fd, buf, MAXLINE)) > 0)
+			FD_ZERO(&readfds);
+			while(1)
 			{
-				buf[strlen(buf)-1] = ' ';
-				if(strcmp("quit " , buf) == 0){
-					//printf("disconnected-%s(%d)\nData : %s\n",inet_ntoa(client_addr.sin_addr), getpid() ,buf);
-					write(wfd_child, buf , strlen(buf));
-					break;
+				memset(buf, 0x00, MAXLINE);
+				
+				FD_ZERO(&readfds);
+				FD_SET(client_fd, &readfds);
+				FD_SET(rfd_child, &readfds);
+				retval = select(256, &readfds, NULL, NULL, &timeout);
+				if(retval == -1){
+					perror("select fail");
+					return 0;
+				}else if(retval == 0){
+					perror("time out");
+					return 0;
 				}
 				else{
-					printf("Read Data %s(%d) : %s\n",
-						inet_ntoa(client_addr.sin_addr),
-						getpid(),buf);
-
+					if(FD_ISSET(client_fd, &readfds)){
+						if(read(client_fd, buf, MAXLINE) <=  0){
+							perror("Read Fail");
+							return 0;
+						}
+						buf[strlen(buf)-1] = ' ';
+						if(strcmp("quit ", buf) == 0){
+							write(wfd_child, buf, strlen(buf));
+							break;
+						}
+						else{
+							printf("Read Data %s(%d) : %s\n", inet_ntoa(client_addr.sin_addr), getpid(), buf);
+						}
+						write(wfd_child, buf, sizeof(buf));
+					}else if(FD_ISSET(rfd_child, &readfds)){
+						if(read(rfd_child, buf, MAXLINE) <= 0){
+							perror("Read Fail");
+							return 0;
+						}
+						write(client_fd, buf, MAXLINE);
+					}
 				}
-				//개행문자 제거
-				write(wfd_child, buf, sizeof(buf));
-				memset(buf, 0x00, MAXLINE); //buffer initialize
+
 			}
 			close(client_fd);
 			return 0;
