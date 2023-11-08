@@ -24,17 +24,8 @@ typedef struct connection{
 node *head = NULL;
 node *tail = NULL;
 
-/* index, pid를 함께 출력 */
-void printConnection(){
-	int cnt = 0;
-	node *temp = head;
-	while(temp != NULL){
-		printf("%d[%d]\n", temp->index, temp->pid);
-		temp = temp->next;
-	}
-}
 
-
+/* 새로운 클라이언트가 연결되면 연결리스트의 뒤에 구조체 추가 */
 void addConnection(int index, int pid, int rfd, int wfd){
 	node *box = (node*)malloc(sizeof(node));
 	box->index = index;
@@ -52,6 +43,7 @@ void addConnection(int index, int pid, int rfd, int wfd){
 	}
 }
 
+/* 각 클라이언트의 마지막 문자열을 연결한 최종 문자열 반환 */
 void getString(char *str){
 	node *temp = head;
 	while(temp != NULL){
@@ -60,6 +52,7 @@ void getString(char *str){
 	}
 }
 
+/* quit가 왔을 때 pid번호를 통해 연결 리스트에서 삭제 */
 void deleteConnection(int pid){
 	node *temp = head;
 	node *prev = NULL;
@@ -67,7 +60,7 @@ void deleteConnection(int pid){
 	if(temp != NULL && temp->pid == pid){
 		head = temp->next;
 		free(temp);
-		printf("HEAD - disconnected\n");
+		printf("%d - disconnected\n", pid);
 		return ;
 	}
 	prev = temp;
@@ -77,7 +70,7 @@ void deleteConnection(int pid){
 			if(tail->pid == temp->pid){
 				prev->next = NULL;
 				tail = prev;
-				printf("TAIL - disconnected\n");
+				printf("%d - disconnected\n", pid);
 			}else {
 		        	prev->next=temp->next;
 				printf("%d - disconnected\n" , pid);
@@ -90,6 +83,7 @@ void deleteConnection(int pid){
 	}
 	printf("Not Found\n");
 }
+
 
 int main(int argc, char **argv)
 {
@@ -134,6 +128,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	signal(SIGCHLD, SIG_IGN);
+	
 	while(1)
 	{
 		memset(str, 0x00, MAXLINE);
@@ -146,8 +141,8 @@ int main(int argc, char **argv)
 			temp = temp->next;
 		}
 		addrlen = sizeof(client_addr);
+		
 		retval = select(256 , &readfds, NULL, NULL, &timeout);
-	
 
 		/* Select로 file descriptor Event 관리 */
 		if(retval == -1){
@@ -169,19 +164,23 @@ int main(int argc, char **argv)
 						perror("read error");
 						return 1;
 					}
+					memset(str, 0x00, MAXLINE);
+					/* quit이면 문자열을 가져오고 연결리스트에서 연결 삭제 */
 					if(strcmp(buf, "quit ")== 0){
 						getString(str);
 						deleteConnection(temp->pid);
-						printf("%s\n" , str);
-						/* 모든 자식 서버에게 전체 데이터 전송 */
-						node *wtemp = head;
-						while(wtemp != NULL){
-							write(wtemp->wfd , str , strlen(str));
-							wtemp = wtemp->next;
-						}
 					}
+					/* quit가 아니면 마지막 문자열을 업데이트 한 후 문자열 가져오기 */
 					else{
 						strcpy(temp->data, buf);
+						getString(str);
+					}
+					printf("Total String : %s\n" , str);
+					/* 모든 클라이언트(자식서버)에게 최종 문자열 전송 */
+					node *wtemp = head;
+					while(wtemp != NULL){
+						write(wtemp->wfd, str, strlen(str));
+						wtemp = wtemp->next;
 					}
 					flag = 1;
 					break;
@@ -196,6 +195,7 @@ int main(int argc, char **argv)
 			printf("accept error\n");
 			break;
 		}
+		/* 파이프 생성 */
 		sprintf(PtoC, "/tmp/PtoC%d", index);
 		sprintf(CtoP, "/tmp/CtoP%d", index);
 		mkfifo(PtoC, S_IRUSR|S_IWUSR);
@@ -232,12 +232,14 @@ int main(int argc, char **argv)
 					return 0;
 				}
 				else{
+					/* 클라이언트로 부터 받은 데이터를 부모서버로 전송 */
 					if(FD_ISSET(client_fd, &readfds)){
 						if(read(client_fd, buf, MAXLINE) <=  0){
 							perror("Read Fail");
 							return 0;
 						}
 						buf[strlen(buf)-1] = ' ';
+						/* quit가 입력되면 부모에게 데이터 송신 후 종료 */
 						if(strcmp("quit ", buf) == 0){
 							write(wfd_child, buf, strlen(buf));
 							break;
@@ -245,8 +247,10 @@ int main(int argc, char **argv)
 						else{
 							printf("Read Data %s(%d) : %s\n", inet_ntoa(client_addr.sin_addr), getpid(), buf);
 						}
-						write(wfd_child, buf, sizeof(buf));
-					}else if(FD_ISSET(rfd_child, &readfds)){
+						write(wfd_child, buf, sizeof(buf));	
+					}
+					/* 부모 서버로 부터 받은 데이터를 클라이언트에게 전송 */
+					else if(FD_ISSET(rfd_child, &readfds)){
 						if(read(rfd_child, buf, MAXLINE) <= 0){
 							perror("Read Fail");
 							return 0;

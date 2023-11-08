@@ -61,15 +61,21 @@ int main(int argc, char **argv)
 		}
 		else{
 			if(FD_ISSET(0, &readfds)){					
-				read(0, buf, MAXLINE);
+				if( read(0, buf, MAXLINE) <= 0 ){
+					perror("read error");
+					return 0;
+				}
 				write(server_sockfd, buf, MAXLINE);
 				if(strcmp(buf, "quit\n") == 0){
 					return 1;	
 				}
 			}
 			else if(FD_ISSET(server_sockfd, &readfds)){
-				read(server_sockfd, buf, MAXLINE);					
-				printf("%s\n" , buf);
+				if(read(server_sockfd, buf, MAXLINE) <= 0){
+					perror("read error");
+					return 0;
+				}					
+				printf("Total String : %s\n" , buf);
 			}
 		}
     		
