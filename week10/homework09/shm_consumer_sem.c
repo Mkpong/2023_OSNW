@@ -67,6 +67,17 @@ int main(int argc, char **argv)
 		local_data.op = cal_data->op;
 		local_data.result = 0;
 		local_data.error = 0;
+
+		// data1 print
+		printf("read  : %02x %02x %02x %02x ", (local_data.data1>>24)&0xFF, (local_data.data1>>16)&0xFF, (local_data.data1>>8)&0xFF, (local_data.data1)&0xFF);
+		// data2 print
+		printf("%02x %02x %02x %02x ", (local_data.data2>>24)&0xFF, (local_data.data2>>16)&0xFF, (local_data.data2>>8)&0xFF, (local_data.data2)&0xFF);
+		// operator print
+		printf("%02x %02x %02x %02x ", (local_data.op)&0xFF, 0x00, 0x00, 0x00);
+		// result print
+		printf("%02x %02x %02x %02x ", (local_data.result>>24)&0xFF, (local_data.result>>16)&0xFF, (local_data.result>>8)&0xFF, (local_data.result)&0xFF);
+		// error print
+		printf("%02x %02x %02x %02x\n", (local_data.error>>8)&0xFF, (local_data.error)&0xFF , 0x00, 0x00);
 		
 		switch(local_data.op){
 			case '+':
@@ -88,9 +99,20 @@ int main(int argc, char **argv)
 			default:
 				local_data.error = -1;
 		}
-		printf("%d\n" , local_data.error);
 		cal_data->result = local_data.result;
 		cal_data->error = local_data.error;
+
+
+		// data1 print
+		printf("write : %02x %02x %02x %02x ", (local_data.data1>>24)&0xFF, (local_data.data1>>16)&0xFF, (local_data.data1>>8)&0xFF, (local_data.data1)&0xFF);
+		// data2 print
+		printf("%02x %02x %02x %02x ", (local_data.data2>>24)&0xFF, (local_data.data2>>16)&0xFF, (local_data.data2>>8)&0xFF, (local_data.data2)&0xFF);
+		// operator print
+		printf("%02x %02x %02x %02x ", (local_data.op)&0xFF, 0x00, 0x00, 0x00);
+		// result print
+		printf("%02x %02x %02x %02x ", (local_data.result>>24)&0xFF, (local_data.result>>16)&0xFF, (local_data.result>>8)&0xFF, (local_data.result)&0xFF);
+		// error print
+		printf("%02x %02x %02x %02x\n", (local_data.error>>8)&0xFF, (local_data.error)&0xFF , 0x00, 0x00);
 
 		semop(semid, &sem1close, 1); // C 프로세스가 실행될 수 있게 해준다.
 		

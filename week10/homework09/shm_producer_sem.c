@@ -37,8 +37,9 @@ int main(int argc, char **argv)
 
 	// shared memory definition
 	shmid = shmget((key_t)1234, sizeof(data), 0666|IPC_CREAT);
-	if (shmid == -1)
+	if (shmid == -1)	
 	{
+		perror("shmget failed : ");
 		return 1;
 	}
 	
@@ -46,6 +47,7 @@ int main(int argc, char **argv)
 	semid = semget((key_t)3477, 2, IPC_CREAT|0666);
 	if(semid == -1)
 	{
+		perror("shmget failed : ");
 		return 1;
 	}
 
@@ -53,6 +55,7 @@ int main(int argc, char **argv)
 	shared_memory = shmat(shmid, NULL, 0);
 	if (shared_memory == (void *)-1)
 	{
+		perror("shmat failed : ");
 		return 1;
 	}
 
@@ -98,6 +101,18 @@ int main(int argc, char **argv)
 		cal_data->result = local_data.result;
 		cal_data->error = local_data.error;
 
+
+		//data1 print
+		printf("write : %02x %02x %02x %02x ", (local_data.data1>>24)&0xFF, (local_data.data1>>16)&0xFF, (local_data.data1>>8)&0xFF, (local_data.data1)&0xFF);
+		//data2 print
+		printf("%02x %02x %02x %02x " , (local_data.data2>>24)&0xFF, (local_data.data2>>16)&0xFF, (local_data.data2>>8)&0xFF, (local_data.data2)&0xFF);
+		//operator print
+		printf("%02x %02x %02x %02x " , (local_data.op)&0xFF, 0x00, 0x00, 0x00);
+		//result print
+		printf("%02x %02x %02x %02x " , (local_data.result>>24)&0xFF, (local_data.result>>16)&0xFF, (local_data.result>>8)&0xFF, (local_data.result)&0xFF);
+		//error print
+		printf("%02x %02x %02x %02x\n", (local_data.error>>8)&0xFF, (local_data.error)&0xFF, 0x00, 0x00);
+		
 		semop(semid, &sem2close, 1);
 		
 		semop(semid, &sem1open, 1);
@@ -105,8 +120,18 @@ int main(int argc, char **argv)
 		//read shared memory
 		local_data.result = cal_data->result;
 		local_data.error = cal_data->error;
-
 		
+		//data1 print
+		printf("read  : %02x %02x %02x %02x " , (local_data.data1>>24)&0xFF, (local_data.data1>>16)&0xFF, (local_data.data1>>8)&0xFF, (local_data.data1)&0xFF);
+		//data2 print
+		printf("%02x %02x %02x %02x " , (local_data.data2>>24)&0xFF, (local_data.data2>>16)&0xFF, (local_data.data2>>8)&0xFF, (local_data.data2)&0xFF);
+		//operator print
+		printf("%02x %02x %02x %02x " , (local_data.op)&0xFF, 0x00, 0x00, 0x00);
+		//result print
+		printf("%02x %02x %02x %02x " , (local_data.result>>24)&0xFF, (local_data.result>>16)&0xFF, (local_data.result>>8)&0xFF, (local_data.result)&0xFF);
+		//error print
+		printf("%02x %02x %02x %02x\n", (local_data.error>>8)&0xFF, (local_data.error)&0xFF, 0x00, 0x00);
+
 
 		if(local_data.error == -1){
 			write(1, "Cal Error\n", 11);
@@ -118,4 +143,3 @@ int main(int argc, char **argv)
 	}
 	return 1;
 }
-
