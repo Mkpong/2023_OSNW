@@ -270,7 +270,7 @@ int main(int argc, char **argv)
 					}else{
 						strcat(buf, "Zero-Division-Error ");
 					}
-					strftime(tbuf, sizeof(tbuf), "%A %B %d %H:%M:%S %Y ", &(local_data.local_time));
+					strftime(tbuf, sizeof(tbuf), "%a %b %d %H:%M:%S %Y ", &(local_data.local_time));
 					strcat(buf, tbuf);
 					/* write client */
 					write(client_fd, buf, strlen(buf));
