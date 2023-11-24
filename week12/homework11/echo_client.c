@@ -60,7 +60,10 @@ int main(int argc, char **argv)
 			continue;
 		}else{
 			if(FD_ISSET(0, &readfds)){
-				read(0, buf, MAXLINE);
+				if( read(0, buf, MAXLINE) <= 0){
+					perror("Read Error");
+					return 1;
+				}
 				if(write(server_sockfd, buf, MAXLINE) <= 0)
 				{
 					perror("write error : ");
@@ -68,7 +71,10 @@ int main(int argc, char **argv)
 				}
 			}
 			else if(FD_ISSET(server_sockfd, &readfds)){
-				read(server_sockfd, buf, MAXLINE);
+				if( read(server_sockfd, buf, MAXLINE) <= 0){
+					perror("Read Error");
+					return 1;
+				}
 				if(strcmp(buf, "quit") == 0){
 					return 1;
 				}
