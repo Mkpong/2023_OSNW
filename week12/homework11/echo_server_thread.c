@@ -78,8 +78,9 @@ void * producer_thread(void *data)
 			return 0;
 		}else if(retval == 0){
 			/* time out -> Consumer Signal Process */
-			/* time update */
+			/* print flag (Consoumer -> Client */
 			if(flag == 0) continue;
+			/* time update */
 			time(&now_time);
 			current_time = localtime(&now_time);
 			sdata[TH_index].local_time = *current_time;
@@ -88,7 +89,8 @@ void * producer_thread(void *data)
 		}
 		else{
 			if(FD_ISSET(sockfd, &readfds)){
-				clean_struct(TH_index);
+				//clean_struct(TH_index);
+				memset(&sdata[TH_index], 0x00, sizeof(cal_data));
 				if(read(sockfd, buf, MAXLINE) <= 0){
 					perror("read error :");
 					return 0;
